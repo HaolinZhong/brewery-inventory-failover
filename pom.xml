@@ -9,8 +9,6 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
-
-
     <groupId>hz.spring</groupId>
     <artifactId>brewery-inventory-failover</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -18,7 +16,9 @@
     <description>A backup service used when brewery inventory service is down</description>
     <properties>
         <java.version>11</java.version>
-        <spring-cloud.version>2021.0.3</spring-cloud.version>
+        <docker.image.prefix>hz2771</docker.image.prefix>
+        <!--Set to name of project-->
+        <docker.image.name>${project.artifactId}</docker.image.name>
     </properties>
     <dependencies>
         <dependency>
@@ -28,6 +28,7 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+            <version>3.1.3</version>
         </dependency>
 
         <dependency>
@@ -65,30 +66,48 @@
         </dependency>
     </dependencies>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
+                    <layers>
+                        <enabled>true</enabled>
+                        <includeLayerTools>true</includeLayerTools>
+                    </layers>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>0.40.0</version>
+                <configuration>
+                    <!--
+                        Mac and Windows WSL 2 users can connect to the Docker Engine through a Unix socket: unix:///var/run/docker.sock
+                        Docker Desktop Windows users can connect to the Docker Engine through a named pipe: npipe:////./pipe/docker_engine,
+                        or TCP socket at this URL: tcp://localhost:2375.
+                    -->
+                    <dockerHost>npipe:////./pipe/docker_engine</dockerHost>
+                    <verbose>true</verbose>
+                    <images>
+                        <image>
+                            <name>${docker.image.prefix}/${docker.image.name}</name>
+                            <alias>${project.artifactId}</alias>
+                            <build>
+                                <!-- copies artifact to docker build dir in target -->
+                                <assembly>
+                                    <descriptorRef>artifact</descriptorRef>
+                                </assembly>
+                                <dockerFile>Dockerfile</dockerFile>
+                                <tags>
+                                    <tag>latest</tag>
+                                    <tag>${project.version}</tag>
+                                </tags>
+                            </build>
+                        </image>
+                    </images>
                 </configuration>
             </plugin>
         </plugins>
